@@ -53,6 +53,15 @@ async function createProject(options: Options) {
 	const projectDirectoryPath = path.join(process.cwd(), options.projectName)
 	const pkgName = slugify(path.basename(projectDirectoryPath))
 
+	if (
+		await fs
+			.access(projectDirectoryPath)
+			.then(() => true)
+			.catch(() => false)
+	) {
+		throw new Error('Project directory already exists')
+	}
+
 	const execaInDirectory = (file: string, args: string[], options = {}) =>
 		execa(file, args, {
 			...options,
@@ -155,10 +164,10 @@ async function createProject(options: Options) {
 					'@next/env',
 					'jose',
 				]
-				await execaInDirectory('npm', ['install', ...packages])
+				await execaInDirectory('bun', ['install', ...packages])
 
 				if (typescript) {
-					await execaInDirectory('npm', [
+					await execaInDirectory('bun', [
 						'install',
 						'--save-dev',
 						'typescript',
@@ -171,6 +180,26 @@ async function createProject(options: Options) {
 			title: 'Format code',
 			task() {
 				return execaInDirectory('npx', ['prettier', '--write', '.'])
+			},
+		},
+		{
+			title: 'Initialize Git repository',
+			async task() {
+				await execaInDirectory('git', ['init'], {
+					cwd: projectDirectoryPath,
+				})
+
+				await execaInDirectory('git', ['add', '.'], {
+					cwd: projectDirectoryPath,
+				})
+
+				await execaInDirectory(
+					'git',
+					['commit', '-m', 'Initial commit from Mangobase'],
+					{
+						cwd: projectDirectoryPath,
+					}
+				)
 			},
 		},
 	])
