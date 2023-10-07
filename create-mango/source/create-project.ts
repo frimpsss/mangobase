@@ -164,10 +164,10 @@ async function createProject(options: Options) {
 					'@next/env',
 					'jose',
 				]
-				await execaInDirectory('bun', ['install', ...packages])
+				await execaInDirectory('npm', ['install', ...packages])
 
 				if (typescript) {
-					await execaInDirectory('bun', [
+					await execaInDirectory('npm', [
 						'install',
 						'--save-dev',
 						'typescript',
@@ -184,7 +184,16 @@ async function createProject(options: Options) {
 		},
 		{
 			title: 'Initialize Git repository',
-			async task() {
+			enabled: async () => {
+				try {
+					await execaInDirectory('git', ['rev-parse', '--is-inside-work-tree'])
+					return false
+				} catch (error) {
+					return error.message.includes('not a git repository')
+				}
+			},
+			task: async () => {
+				// The rest of your Git initialization logic
 				await execaInDirectory('git', ['init'], {
 					cwd: projectDirectoryPath,
 				})
