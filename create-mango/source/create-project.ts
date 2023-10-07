@@ -42,6 +42,22 @@ const copyWithTemplate = async (
 	await fs.writeFile(to, generatedSource)
 }
 
+async function shouldInitializeGit() {
+	try {
+		await execa('git', ['rev-parse', '--is-inside-work-tree'], {
+			cwd: process.cwd(),
+		})
+
+		return false
+	} catch (error) {
+		if (error instanceof Error) {
+			return error.message.includes('not a git repository')
+		}
+
+		return false
+	}
+}
+
 type Language = 'typescript' | 'javascript'
 
 interface Options {
@@ -77,6 +93,7 @@ async function createProject(options: Options) {
 		path.join(path.resolve(__dirname, templatePath), file)
 
 	const toPath = (rootPath: string, file: string) => path.join(rootPath, file)
+	const initGit = await shouldInitializeGit()
 
 	const tasks = new Listr([
 		{
@@ -184,16 +201,8 @@ async function createProject(options: Options) {
 		},
 		{
 			title: 'Initialize Git repository',
-			enabled: async () => {
-				try {
-					await execaInDirectory('git', ['rev-parse', '--is-inside-work-tree'])
-					return false
-				} catch (error) {
-					return error.message.includes('not a git repository')
-				}
-			},
+			enabled: () => initGit,
 			task: async () => {
-				// The rest of your Git initialization logic
 				await execaInDirectory('git', ['init'], {
 					cwd: projectDirectoryPath,
 				})
